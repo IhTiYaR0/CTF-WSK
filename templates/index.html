@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="participant-header">
+    <div class="user-badge">
+        <span class="user-avatar">👤</span>
+        <span class="user-name">{{ user.username }}</span>
+    </div>
+    <div class="score-badge">
+        <span class="score-icon">🏆</span>
+        <span class="score-value">{{ total_score }}</span>
+        <span class="score-label">баллов</span>
+    </div>
+    <a href="/logout" class="logout-btn">Выйти</a>
+</div>
+
+<div class="participant-content">
+    <h2 class="section-title">🎯 Доступные задания</h2>
+    
+    {% if not show_challenges %}
+    <div class="empty-state">
+        <span class="empty-icon">⏳</span>
+        <p>Задания временно скрыты администратором</p>
+    </div>
+    {% elif not challenges %}
+    <div class="empty-state">
+        <span class="empty-icon">📭</span>
+        <p>Заданий пока нет</p>
+    </div>
+    {% else %}
+    <div class="challenges-grid">
+        {% for ch in challenges %}
+        <div class="challenge-card {% if ch.class == 'success' %}card-solved{% elif ch.class == 'danger' %}card-failed{% endif %}">
+            <div class="card-header">
+                <div class="challenge-number">#{{ ch.module_number }}</div>
+                <div class="challenge-points">
+                    <span class="points-icon">⭐</span>
+                    {{ ch.points }}
+                </div>
+            </div>
+            
+            <!-- <h3 class="challenge-title">{{ ch.title or ('Задание #' ~ ch.module_number) }}</h3> -->
+            {% if ch.module_title %}
+                <div style="color: #8b949e; font-size: 0.85em; margin-top: -6px;">{{ ch.module_title }}</div>
+            {% endif %}
+            
+            <div class="card-status">
+                {% if ch.class == 'success' %}
+                    <span class="status-pill solved">
+                        <span class="status-icon">✓</span> Решено
+                    </span>
+                {% elif ch.class == 'danger' %}
+                    <span class="status-pill failed">
+                        <span class="status-icon">✗</span> Провалено
+                    </span>
+                {% else %}
+                    <span class="status-pill available">
+                        <span class="status-icon">◉</span> Доступно
+                    </span>
+                {% endif %}
+            </div>
+            
+            <div class="card-footer">
+                {% if ch.can_open and ch.status != "Решено" %}
+                    <a href="/challenge/{{ ch.id }}" class="btn-open">
+                        <span>Начать</span>
+                        <span class="btn-arrow">→</span>
+                    </a>
+                {% elif ch.class == "success" %}
+                    <button class="btn-disabled solved-btn" disabled>
+                        <span>✓ Решено</span>
+                    </button>
+                {% else %}
+                    <button class="btn-disabled failed-btn" disabled>
+                        <span>⛔ Исчерпано</span>
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

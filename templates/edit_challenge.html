@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="edit-header">
+    <a href="/admin" class="back-link">
+        <span class="back-icon">←</span>
+        <span>Назад</span>
+    </a>
+    <h2>📝 Редактирование задания</h2>
+</div>
+
+<div class="edit-container">
+    <div class="edit-card">
+        <form method="post" class="edit-form" enctype="multipart/form-data">
+            <input type="hidden" name="description" value="">
+            <div class="form-group">
+                <label for="question">
+                    <span class="label-icon">📋</span>
+                    Текст задания
+                </label>
+                <textarea id="question" name="question" rows="8" placeholder="Введите текст задания..." required>{{ ch.question }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="answer_format">
+                    <span class="label-icon">🧩</span>
+                    Формат ответа (опционально)
+                </label>
+                <input type="text" id="answer_format" name="answer_format" value="{{ ch.answer_format or '' }}" placeholder="Например: CTF{...}">
+            </div>
+
+            <div class="form-group">
+                <label for="module_id">
+                    <span class="label-icon">📚</span>
+                    Модуль
+                </label>
+                <select id="module_id" name="module_id" required>
+                    {% for m in modules %}
+                        <option value="{{ m.id }}" {% if ch.module_id == m.id %}selected{% endif %}>{{ m.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="flag">
+                        <span class="label-icon">🚩</span>
+                        Флаг
+                    </label>
+                    <input type="text" id="flag" name="flag" value="{{ ch.flag }}" placeholder="ctf{...}" required>
+                </div>
+
+                <div class="form-group half">
+                    <label for="points">
+                        <span class="label-icon">⭐</span>
+                        Баллы
+                    </label>
+                    <input type="number" id="points" name="points" value="{{ ch.points }}" min="1" max="1000" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="max_attempts">
+                    <span class="label-icon">🔁</span>
+                    Количество попыток
+                </label>
+                <input type="number" id="max_attempts" name="max_attempts" value="{{ ch.max_attempts or 5 }}" min="1" required>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <span class="label-icon">📎</span>
+                    Файл задания (опционально)
+                </label>
+                <input type="file" name="file" accept=".txt">
+                {% if ch.file_path %}
+                <label style="margin-top: 6px;">
+                    <input type="checkbox" name="remove_file" value="true">
+                    Удалить текущий файл
+                </label>
+                {% endif %}
+            </div>
+
+            <div class="form-actions">
+                <a href="/admin" class="btn-cancel">Отмена</a>
+                <button type="submit" class="btn-save">
+                    <span class="btn-icon">💾</span>
+                    <span>Сохранить</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="nav">
+    <a href="/admin" class="back-link">← Назад</a>
+    <div class="user-info">
+        <span class="user-icon">👤</span>
+        <span class="username">{{ target_user.username }}</span>
+        {% if target_user.is_root %}
+        <span class="admin-badge">Root</span>
+        {% endif %}
+        {% if target_user.is_admin %}
+        <span class="admin-badge">Admin</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Статистика участника -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon score-icon">🏆</div>
+        <div class="stat-value">{{ total_score }}</div>
+        <div class="stat-label">Баллы</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon tasks-icon">📁</div>
+        <div class="stat-value">{{ challenges|length }}</div>
+        <div class="stat-label">Задания</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon solved-icon">✅</div>
+        <div class="stat-value">{{ challenges|selectattr('is_solved')|list|length }}</div>
+        <div class="stat-label">Решено</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon failed-icon">❌</div>
+        <div class="stat-value">{{ challenges|selectattr('status', 'equalto', 'Провалено')|list|length }}</div>
+        <div class="stat-label">Провалено</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon pending-icon">⏳</div>
+        <div class="stat-value">{{ challenges|selectattr('status', 'equalto', 'Не начато')|list|length }}</div>
+        <div class="stat-label">Не начато</div>
+    </div>
+</div>
+
+<!-- Прогресс бар -->
+<div class="progress-section">
+    <div class="progress-header">
+        <span>Общий прогресс</span>
+        <span>{{ ((challenges|selectattr('is_solved')|list|length / challenges|length) * 100)|int }}%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: {{ (challenges|selectattr('is_solved')|list|length / challenges|length) * 100 }}%"></div>
+    </div>
+</div>
+
+<!-- Действия -->
+<div class="actions-section">
+    <h3>⚡ Управление</h3>
+    <div class="action-buttons">
+        <form action="/admin/user/{{ target_user.id }}/reset" method="post" onsubmit="return confirm('⚠️ Вы уверены? ВЕСЬ прогресс участника будет удалён!');">
+            <button type="submit" class="btn-danger">
+                <span class="btn-icon">🗑️</span>
+                <span>Сбросить весь прогресс</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Таблица заданий -->
+<div class="challenges-section">
+    <h3>📋 Прогресс по заданиям</h3>
+    <div class="challenges-table">
+        <div class="table-header">
+            <div class="col col-num">#</div>
+            <div class="col col-title">Задание</div>
+            <div class="col col-points">Баллы</div>
+            <div class="col col-status">Статус</div>
+            <div class="col col-attempts">Попытки</div>
+            <div class="col col-actions">Действия</div>
+        </div>
+        {% for ch in challenges %}
+        <div class="table-row {% if ch.is_solved %}row-solved{% elif ch.status == 'Провалено' %}row-failed{% endif %}">
+            <div class="col col-num">{{ ch.id }}</div>
+            <div class="col col-title">
+                <span class="challenge-title">{{ ch.title or ('Задание #' ~ ch.module_number) }}</span>
+                {% if ch.module_title %}
+                <div style="color: #8b949e; font-size: 0.85em; margin-top: 2px;">{{ ch.module_title }}</div>
+                {% endif %}
+            </div>
+            <div class="col col-points">
+                <span class="points-badge">{{ ch.points }} pts</span>
+            </div>
+            <div class="col col-status">
+                {% if ch.is_solved %}
+                    <span class="status-pill solved">
+                        <span class="status-icon">✓</span> Решено
+                    </span>
+                {% elif ch.status == 'Провалено' %}
+                    <span class="status-pill failed">
+                        <span class="status-icon">✗</span> Провалено
+                    </span>
+                {% elif ch.status == 'Не начато' %}
+                    <span class="status-pill pending">
+                        <span class="status-icon">○</span> Не начато
+                    </span>
+                {% else %}
+                    <span class="status-pill in-progress">
+                        <span class="status-icon">◐</span> {{ ch.attempts }}/{{ ch.max_attempts }}
+                    </span>
+                {% endif %}
+            </div>
+            <div class="col col-attempts">
+                {% if ch.is_solved %}
+                    <span class="attempts-success">С {{ ch.attempts }}-й попытки</span>
+                {% elif ch.attempts > 0 %}
+                    <div class="attempts-bar-container">
+                        <div class="attempts-bar-fill" style="width: {{ (ch.attempts / ch.max_attempts) * 100 }}%"></div>
+                    </div>
+                    <span class="attempts-text">{{ ch.attempts }}/{{ ch.max_attempts }}</span>
+                {% else %}
+                    <span class="attempts-none">—</span>
+                {% endif %}
+            </div>
+            <div class="col col-actions">
+                {% if can_force_solve and not ch.is_solved %}
+                    <form action="/admin/user/{{ target_user.id }}/solve_challenge/{{ ch.id }}" method="post">
+                        <button type="submit" class="btn-reset" title="Пометить как решено">
+                            ✓
+                        </button>
+                    </form>
+                {% elif ch.is_solved or ch.attempts > 0 %}
+                    <form action="/admin/user/{{ target_user.id }}/reset_challenge/{{ ch.id }}" method="post" onsubmit="return confirm('Сбросить прогресс по заданию {{ ch.title }}?');">
+                        <button type="submit" class="btn-reset" title="Сбросить прогресс">
+                            ↺
+                        </button>
+                    </form>
+                {% else %}
+                    <span class="no-action">—</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

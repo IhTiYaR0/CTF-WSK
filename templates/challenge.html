@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="challenge-header">
+    <a href="/" class="back-link">
+        <span class="back-icon">←</span>
+        <span>К заданиям</span>
+    </a>
+</div>
+
+<div class="challenge-container">
+        <div class="attempts-info">
+            <span class="attempts-label">Осталось попыток:</span>
+            <div class="attempts-dots">
+                {% for i in range(max_attempts) %}
+                    {% if i < (max_attempts - attempts_left) %}
+                        <span class="attempt-dot used"></span>
+                    {% else %}
+                        <span class="attempt-dot available"></span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <span class="attempts-count">{{ attempts_left }}/{{ max_attempts }}</span>
+        </div>
+    <div class="challenge-card-full">
+        <div class="card-header-full">
+            <div class="challenge-info">
+                <span class="challenge-number">Задание #{{ module_number }}</span>
+                <h1 class="challenge-title-full">{{ challenge.title or ('Задание #' ~ module_number) }}</h1>
+            </div>
+            <div class="points-badge-full">
+                <span class="points-icon-full">⭐</span>
+                <span class="points-value-full">{{ challenge.points }}</span>
+                <span class="points-label-full" style="margin-left: 5px;">баллов</span>
+            </div>
+        </div>
+        
+        <div class="challenge-question-box">
+            <div class="question-label">📋 Задание</div>
+            <div class="question-text">{{ challenge.question | replace('\r\n', '\n') | replace('\n', '<br>') | safe }}</div>
+        </div>
+
+        {% if challenge.file_path %}
+        <div class="challenge-question-box" style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+            <div>
+                <div class="question-label">📎 Файл задания</div>
+                <div class="question-text">Скачай файл для выполнения задания</div>
+            </div>
+            <a class="btn-open" style="width: auto; padding: 10px 16px;" href="/static/{{ challenge.file_path }}" download>
+                Скачать
+            </a>
+        </div>
+        {% endif %}
+        
+        {% if msg %}
+        <div class="message-box {% if msg_type == 'success' %}message-success{% else %}message-error{% endif %}">
+            <span class="message-icon">
+                {% if msg_type == 'success' %}✓{% else %}✗{% endif %}
+            </span>
+            <span class="message-text">{{ msg }}</span>
+        </div>
+        {% endif %}
+        
+        {% if solved %}
+        <div class="solved-box">
+            <div class="solved-icon">🎉</div>
+            <h2>Отлично! Задание выполнено!</h2>
+            <p class="solved-points">+{{ challenge.points }} баллов</p>
+            <a href="/" class="btn-return">Вернуться к заданиям</a>
+        </div>
+        {% elif blocked %}
+        <div class="blocked-box">
+            <div class="blocked-icon">⛔</div>
+            <h2>Доступ закрыт</h2>
+            <p>Вы использовали все 5 попыток</p>
+            <a href="/" class="btn-return">Вернуться к заданиям</a>
+        </div>
+        {% else %}
+
+        
+        <div class="submit-form">
+            <form method="post">
+                {% if challenge.answer_format %}
+                <div class="answer-format">Формат ответа: {{ challenge.answer_format }}</div>
+                {% endif %}
+                <div class="input-wrapper">
+                    <input type="text" name="flag" placeholder="Введите флаг..." required autocomplete="off" class="flag-input">
+                </div>
+                <button type="submit" class="btn-submit">
+                    <span>Отправить</span>
+                    <span class="btn-submit-icon">→</span>
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

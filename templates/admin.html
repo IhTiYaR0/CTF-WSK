@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="nav">
+    <h2>{% if user.is_root %}Root панель{% else %}Админ-панель{% endif %}</h2>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <form action="/admin/toggle_challenges" method="post" style="margin:0;">
+            {% if show_challenges %}
+                <button type="submit" class="secondary" style="padding: 6px 12px;">Скрыть задания</button>
+            {% else %}
+                <button type="submit" style="background: #2ea043; padding: 6px 12px;">Показать задания</button>
+            {% endif %}
+        </form>
+        <a href="/admin/change_password"><button class="secondary">Сменить пароль</button></a>
+        <a href="/logout"><button class="secondary">Выйти</button></a>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; align-items: start;">
+    <div class="card">
+        <h3>Новое задание</h3>
+        <form action="/admin/create" method="post" enctype="multipart/form-data">
+            <textarea name="question" placeholder="Вопрос / Задание" required></textarea>
+            <input type="text" name="answer_format" placeholder="Формат ответа (например: CTF{...})">
+            <input type="text" name="flag" placeholder="Правильный флаг" required>
+            <input type="number" name="points" placeholder="Баллы" required>
+            <input type="number" name="max_attempts" placeholder="Попыток (например: 5)" min="1" value="5" required>
+            <select name="module_id" required>
+                {% for m in modules %}
+                    <option value="{{ m.id }}">{{ m.title }}</option>
+                {% endfor %}
+            </select>
+            <input type="file" name="file" accept=".txt">
+            <button type="submit" style="width: 100%;">Создать</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Рейтинг участников</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 2px solid var(--border);">
+                    <th style="padding: 10px;">Статус</th>
+                    <th style="padding: 10px;">Участник</th>
+                    <th style="padding: 10px;">Баллы</th>
+                    <th style="padding: 10px;">Решенные задания (попытка)</th>
+                    <th style="padding: 10px;">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in users %}
+                <tr style="border-bottom: 1px solid var(--border); {% if p.username == winner_name %}background: rgba(210, 153, 34, 0.1);{% endif %}">
+                    <td style="padding: 10px; text-align: center;">
+                        {% if p.username == winner_name %}
+                            <span title="Лидер" style="font-size: 1.2em;">👑</span>
+                        {% else %}
+                            <span style="color: #484f58;">•</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px;"><strong>{{ p.username }}</strong></td>
+                    <td style="padding: 10px; color: var(--success); font-weight: bold;">{{ p.score }}</td>
+                    <td style="padding: 10px; font-size: 0.85em; color: #8b949e;">{{ p.details }}</td>
+                    <td style="padding: 10px;">
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <a href="/admin/user/{{ p.id }}"><button class="secondary" style="padding: 4px 10px; font-size: 0.8em;">Подробнее</button></a>
+                            <form action="/admin/user/{{ p.id }}/delete" method="post" style="margin:0;" onsubmit="return confirm('Удалить пользователя {{ p.username }}? Это удалит весь его прогресс.');">
+                                <button type="submit" style="background: #da3633; padding: 4px 6px; font-size: 0.8em;">x</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Управление модулями</h3>
+    <form action="/admin/create_module" method="post" style="display: flex; gap: 10px; margin-bottom: 12px;">
+        <input type="text" name="title" placeholder="Название модуля" required style="flex: 1;">
+        <button type="submit">Создать модуль</button>
+    </form>
+    {% for m in modules %}
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px;">
+        <div>
+            <strong>{{ m.title }}</strong>
+            {% if m.is_active %}
+                <span style="color: var(--success); margin-left: 6px;">Активен</span>
+            {% else %}
+                <span style="color: #8b949e; margin-left: 6px;">Отключен</span>
+            {% endif %}
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <form action="/admin/module/{{ m.id }}/toggle" method="post" style="margin:0;">
+                {% if m.is_active %}
+                    <button type="submit" class="secondary" style="padding: 4px 10px;">Отключить</button>
+                {% else %}
+                    <button type="submit" style="background: #2ea043; padding: 4px 10px;">Включить</button>
+                {% endif %}
+            </form>
+            <form action="/admin/module/{{ m.id }}/delete" method="post" style="margin:0;">
+                <button type="submit" style="background: #da3633; padding: 4px 10px;">Удалить</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <h3>Управление заданиями</h3>
+    {% for m in modules %}
+    <div style="margin-bottom: 14px;">
+        <div style="font-weight: 600; margin-bottom: 8px;">{{ m.title }}</div>
+        <div class="challenge-list" data-module-id="{{ m.id }}">
+        {% for ch in challenges %}
+            {% if ch.module_id == m.id %}
+            <div class="challenge-row" draggable="true" data-id="{{ ch.id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; cursor: grab;">
+                <div>
+                    <span style="color: #8b949e; margin-right: 8px;">↕</span>
+                    <strong>{{ ch.title or ('Задание #' ~ ch.id) }}</strong> <span style="color: var(--accent);">{{ ch.points }} pts</span>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <a href="/admin/edit/{{ ch.id }}"><button class="secondary" style="padding: 4px 10px;">Edit</button></a>
+                    <form action="/admin/delete/{{ ch.id }}" method="post" style="margin:0;">
+                        <button type="submit" style="background: #da3633; padding: 4px 10px;">Del</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    (function () {
+        var lists = document.querySelectorAll(".challenge-list");
+        lists.forEach(function (list) {
+            var dragged = null;
+            list.addEventListener("dragstart", function (e) {
+                var row = e.target.closest(".challenge-row");
+                if (!row) return;
+                dragged = row;
+                row.style.opacity = "0.5";
+                e.dataTransfer.effectAllowed = "move";
+            });
+
+            list.addEventListener("dragend", function (e) {
+                var row = e.target.closest(".challenge-row");
+                if (row) row.style.opacity = "1";
+            });
+
+            list.addEventListener("dragover", function (e) {
+                e.preventDefault();
+                var row = e.target.closest(".challenge-row");
+                if (!row || row === dragged) return;
+                var rect = row.getBoundingClientRect();
+                var next = (e.clientY - rect.top) > (rect.height / 2);
+                list.insertBefore(dragged, next ? row.nextSibling : row);
+            });
+
+            list.addEventListener("drop", function (e) {
+                e.preventDefault();
+                var ids = Array.prototype.slice.call(list.querySelectorAll(".challenge-row"))
+                    .map(function (el) { return parseInt(el.getAttribute("data-id"), 10); });
+                var moduleId = parseInt(list.getAttribute("data-module-id"), 10);
+                fetch("/admin/reorder_challenges", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ module_id: moduleId, ids: ids })
+                }).catch(function () {});
+            });
+        });
+    })();
+</script>
+{% endblock %}

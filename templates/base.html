@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>CTF Platform</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+    <script>
+        (function () {
+            var es;
+            function connect() {
+                es = new EventSource("/events?ts=" + Date.now());
+                es.onmessage = function (e) {
+                    if (e.data !== "update") return;
+                    fetch(window.location.href, { cache: "no-store" })
+                        .then(function (r) { return r.text(); })
+                        .then(function (html) {
+                            var doc = new DOMParser().parseFromString(html, "text/html");
+                            var newContainer = doc.querySelector(".container");
+                            var container = document.querySelector(".container");
+                            if (newContainer && container) {
+                                container.innerHTML = newContainer.innerHTML;
+                            }
+                        })
+                        .catch(function () { /* ignore */ });
+                };
+                es.addEventListener("ping", function () {});
+                es.onerror = function () {
+                    try { es.close(); } catch (e) {}
+                    setTimeout(connect, 3000);
+                };
+            }
+            connect();
+        })();
+    </script>
+</body>
+</html>
