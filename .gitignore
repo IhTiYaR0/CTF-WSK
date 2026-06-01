@@ -1,4 +1,3 @@
-
 .env
 .envrc
 .venv
@@ -7,3 +6,12 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
