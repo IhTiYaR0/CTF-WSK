@@ -542,6 +542,61 @@ async def admin_panel(request: Request, db: Session = Depends(get_db)):
         "modules": modules
     })
 
+@app.get("/admin/api/progress")
+async def admin_progress(request: Request, db: Session = Depends(get_db)):
+    admin = get_current_user(request, db)
+    if not is_admin_or_root(admin):
+        raise HTTPException(status_code=403)
+
+    all_challenges = db.query(Challenge).order_by(Challenge.module_id, Challenge.sort_order, Challenge.id).all()
+    participants = db.query(User).filter(User.is_admin == False, User.is_root == False).all()
+    result = []
+
+    for participant in participants:
+        progress_entries = db.query(UserProgress).filter(UserProgress.user_id == participant.id).all()
+        progress_map = {entry.challenge_id: entry for entry in progress_entries}
+        total_score = 0
+        progress_list = []
+
+        for challenge in all_challenges:
+            entry = progress_map.get(challenge.id)
+            max_attempts = challenge.max_attempts or 5
+            status = "not_started"
+            attempts = 0
+            is_solved = False
+
+            if entry:
+                attempts = entry.attempts
+                is_solved = bool(entry.is_solved)
+                if is_solved:
+                    status = "solved"
+                    total_score += challenge.points
+                elif attempts >= max_attempts:
+                    status = "failed"
+                else:
+                    status = "in_progress"
+
+            progress_list.append({
+                "challenge_id": challenge.id,
+                "challenge_title": challenge.title,
+                "module_id": challenge.module_id,
+                "module_title": challenge.module.title if challenge.module else None,
+                "points": challenge.points,
+                "attempts": attempts,
+                "max_attempts": max_attempts,
+                "is_solved": is_solved,
+                "status": status,
+            })
+
+        result.append({
+            "user_id": participant.id,
+            "username": participant.username,
+            "total_score": total_score,
+            "progress": progress_list,
+        })
+
+    return {"participants": result}
+
 @app.post("/admin/toggle_challenges")
 async def toggle_challenges(request: Request, db: Session = Depends(get_db)):
     admin = get_current_user(request, db)
