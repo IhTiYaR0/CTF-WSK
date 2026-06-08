@@ -597,6 +597,37 @@ async def admin_progress(request: Request, db: Session = Depends(get_db)):
 
     return {"participants": result}
 
+@app.get("/admin/api/answers")
+async def admin_answers(request: Request, db: Session = Depends(get_db)):
+    admin = get_current_user(request, db)
+    if not is_admin_or_root(admin):
+        raise HTTPException(status_code=403)
+
+    all_challenges = db.query(Challenge).order_by(Challenge.module_id, Challenge.sort_order, Challenge.id).all()
+    modules: dict[int, dict] = {}
+    for ch in all_challenges:
+        module_id = ch.module_id or 0
+        module_title = ch.module.title if ch.module else "Без модуля"
+        if module_id not in modules:
+            modules[module_id] = {
+                "module_id": module_id,
+                "module_title": module_title,
+                "challenges": []
+            }
+        modules[module_id]["challenges"].append({
+            "challenge_id": ch.id,
+            "title": ch.title,
+            "question": ch.question,
+            "flag": ch.flag,
+            "answer_format": ch.answer_format,
+            "points": ch.points,
+            "max_attempts": ch.max_attempts,
+            "file_path": ch.file_path,
+            "sort_order": ch.sort_order,
+        })
+
+    return {"modules": list(modules.values())}
+
 @app.post("/admin/toggle_challenges")
 async def toggle_challenges(request: Request, db: Session = Depends(get_db)):
     admin = get_current_user(request, db)
